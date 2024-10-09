@@ -14,15 +14,17 @@ function doPost(e) {
     }
 
     var text = params.event.text;
-    var userId = params.event.user;
     var channel = params.event.channel;
     var thread_ts = params.event.thread_ts ? params.event.thread_ts : params.event.ts;
 
     // メンションと「++」が含まれるかチェック
-    if (text.includes('++') && text.includes('<@' + userId + '>')) {
-      var displayName = getSlackDisplayName(userId); // 表示名を取得
-      var newPoints = updateSpreadsheet(userId, displayName); // ポイントを更新または追加
-      sendSlackMessage(channel, thread_ts, userId, newPoints); // Slackに通知
+    if (text.includes('++')) {
+      var targetUserId = extractUserId(text); // メンションされたユーザーIDを抽出
+      if (targetUserId) {
+        var displayName = getSlackDisplayName(targetUserId); // 表示名を取得
+        var newPoints = updateSpreadsheet(targetUserId, displayName); // ポイントを更新または追加
+        sendSlackMessage(channel, thread_ts, targetUserId, newPoints); // Slackに通知
+      }
     }
 
     // ログの記録
@@ -31,6 +33,13 @@ function doPost(e) {
     // エラーログの記録
     logToSpreadsheet('Error in doPost: ' + error.message);
   }
+}
+
+// メッセージからメンションされたユーザーIDを抽出する関数
+function extractUserId(text) {
+  var mentionRegex = /<@([A-Z0-9]+)> \+\+/;
+  var match = text.match(mentionRegex);
+  return match ? match[1] : null; // メンションされたユーザーIDを返す
 }
 
 function updateSpreadsheet(userId, displayName) {
